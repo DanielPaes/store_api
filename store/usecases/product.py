@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from uuid import UUID
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -32,12 +33,24 @@ class ProductUsecase:
         return [ProductOut(**item) async for item in self.collection.find()]
 
     async def update(self, id: UUID, body: ProductUpdate) -> ProductUpdateOut:
+
+        # Altera a campo updated_at para o momento da atualização
+        # Ou permite o usuário editar esse campo
+        if body.updated_at == None:  
+            update_time = datetime.now()
+        else:
+            update_time = body.updated_at
+
+        update_data = body.model_dump(exclude_none=True)
+        update_data["updated_at"] = update_time
+
+
         result = await self.collection.find_one_and_update(
             filter={"id": id},
-            update={"$set": body.model_dump(exclude_none=True)},
+            update={"$set": update_data},
             return_document=pymongo.ReturnDocument.AFTER,
         )
-
+        
         return ProductUpdateOut(**result)
 
     async def delete(self, id: UUID) -> bool:
